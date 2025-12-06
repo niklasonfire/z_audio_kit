@@ -7,25 +7,24 @@ LOG_MODULE_REGISTER(audio_sink, LOG_LEVEL_INF);
  * Liest Daten, macht etwas damit (Logging) und zerstört den Block.
  */
 void log_sink_process(struct audio_node *self) {
-    // 1. Warten auf Daten (Blockiert den Thread, bis etwas in der FIFO ist)
     struct audio_block *block = k_fifo_get(&self->in_fifo, K_FOREVER);
-
     if (!block) return;
 
-    // 2. Verarbeitung (Hier simulieren wir die Ausgabe)
-    // Wir berechnen z.B. den Peak-Wert des Blocks für eine VU-Meter Anzeige
+    // Verarbeitung...
     int16_t max_val = 0;
-    for(size_t i = 0; i < block->data_len; i++) {
-        int16_t val = block->data[i];
-        if (val < 0) val = -val;
-        if (val > max_val) max_val = val;
+    if (block->data) {
+        for(size_t i = 0; i < block->data_len; i++) {
+            int16_t val = block->data[i];
+            if (val < 0) val = -val;
+            if (val > max_val) max_val = val;
+        }
     }
+    LOG_INF("SINK [%p]: Peak=%d | RefCount=%d", block, max_val, atomic_get(&block->ref_count));
 
-    // Zeige Adresse des Blocks (zum Debuggen des Pointers) und Peak
-    LOG_INF("SINK [%p]: Peak=%d | RefCount=%ld", block, max_val, atomic_get(&block->ref_count));
-
-    // 3. WICHTIG: Speicher-Zyklus beenden
-    // Da dies ein Sink ist, geben wir den Block frei.
+    // --- ÄNDERUNG: KEIN k_free MEHR! ---
+    // Das Framework besitzt diesen Pointer (Slab) und audio_block_release räumt ihn auf.
+    
+    // 3. Container und Daten zurückgeben
     audio_block_release(block);
 }
 

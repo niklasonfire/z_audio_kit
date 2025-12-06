@@ -1,0 +1,11 @@
+# deps/modules/z_audio_kit/samples/basic_sine/Kconfig
+
+# WICHTIG: Lädt alle Zephyr-Basis-Symbole (Kernel, Boards, Console, etc.)
+source "Kconfig.zephyr"
+
+# Optional: Deine Sample-spezifischen Einstellungen
+menu "Basic Sine Sample"
+    config SAMPLE_SINE_FREQ
+        int "Sine Frequency"
+        default 440
+endmenu

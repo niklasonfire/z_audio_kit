@@ -25,34 +25,25 @@ struct audio_block *audio_block_alloc(void) {
 }
 
 void audio_block_release(struct audio_block *block) {
+    // 1. Grundlegender Sicherheitscheck
     if (!block) return;
 
-    /*
-     * NOTE on Zephyr Atomic API:
-     * atomic_dec() returns the PREVIOUS value (fetch_and_sub).
-     *
-     * Example Scenario (Two Owners):
-     * 1. RefCount is 2.
-     * 2. atomic_dec returns 2 (old value), and sets RefCount to 1.
-     * 3. old_count (2) != 1. No free. Correct.
-     *
-     * Example Scenario (Last Owner):
-     * 1. RefCount is 1.
-     * 2. atomic_dec returns 1 (old value), and sets RefCount to 0.
-     * 3. old_count (1) == 1. Free. Correct.
-     *
-     * To make this logic explicit and readable (addressing review comments),
-     * we calculate the new_count locally and check against 0.
-     */
-    
     atomic_val_t old_count = atomic_dec(&block->ref_count);
     atomic_val_t new_count = old_count - 1;
 
     if (new_count == 0) { 
-        // We were the last owner. The counter is now 0.
-        // Free resources.
-        k_mem_slab_free(&audio_data_slab, (void **)&block->data);
-        k_free(block);
+        // Wir sind der letzte Besitzer. Aufräumen!
+
+        // --- SCHRITT 1: Daten (Slab) freigeben ---
+        if (block->data != NULL) {
+            // Korrekt: Zeiger auf den Slab, Zeiger auf die Daten (ohne & bei block->data)
+            k_mem_slab_free(&audio_data_slab, (void *)block->data);
+            block->data = NULL; // Sauberkeit
+        }
+
+        // --- SCHRITT 2: Wrapper (Heap) freigeben ---
+        // Da du oben k_malloc() benutzt hast, MUSS hier k_free() stehen.
+        k_free(block); 
     }
 }
 

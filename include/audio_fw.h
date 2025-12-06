@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 // --- Configuration Data Types ---
-#define AUDIO_BLOCK_SIZE_BYTES (CONFIG_AUDIO_BLOCK_SAMPLES * sizeof(int16_t))
+#define AUDIO_BLOCK_SIZE_BYTES  (CONFIG_AUDIO_BLOCK_SAMPLES * sizeof(int16_t))
 
 // --- 1. The Data Container (Block) ---
 struct audio_block {
