@@ -1,0 +1,36 @@
+menu "Audio Framework"
+
+config AUDIO_FRAMEWORK
+    bool "Enable Audio Framework"
+    default y
+    select FPU # Audio braucht Floating Point Unit
+
+if AUDIO_FRAMEWORK
+
+config AUDIO_BLOCK_SAMPLES
+    int "Samples per Block"
+    default 128
+    help
+      Number of samples in one audio chunk (e.g. 128 shorts).
+
+config AUDIO_SAMPLE_RATE
+    int "Sample Rate (Hz)"
+    default 48000
+
+config AUDIO_MEM_SLAB_COUNT
+    int "Number of Memory Slabs"
+    default 20
+    help
+      Total number of audio blocks available in the memory pool.
+      Increase this if you have many nodes or buffers.
+
+config AUDIO_THREAD_STACK_SIZE
+    int "Default Node Stack Size"
+    default 1024
+
+config AUDIO_THREAD_PRIORITY
+    int "Default Node Priority"
+    default 5
+
+endif # AUDIO_FRAMEWORK
+endmenu

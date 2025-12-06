@@ -1,0 +1,4 @@
+name: audio_framework
+build:
+  cmake: .
+  kconfig: Kconfig
