@@ -1,6 +1,7 @@
 #include "audio_fw.h"
 #include <zephyr/logging/log.h>
 #include <string.h>
+#include <errno.h>
 
 LOG_MODULE_REGISTER(audio_core, LOG_LEVEL_INF);
 
@@ -38,6 +39,28 @@ void audio_block_release(struct audio_block *block) {
         }
         k_mem_slab_free(&audio_block_slab, (void *)block); 
     }
+}
+
+int audio_block_get_writable(struct audio_block **block_ptr) {
+    struct audio_block *block = *block_ptr;
+    if (!block) return -EINVAL;
+
+    if (atomic_get(&block->ref_count) > 1) {
+        struct audio_block *new_block = audio_block_alloc();
+        if (!new_block) {
+            LOG_WRN("CoW failed: OOM (original ref_count=%ld)", atomic_get(&block->ref_count));
+            return -ENOMEM;
+        }
+
+        LOG_DBG("CoW executed: %p -> %p", block, new_block);
+
+        memcpy(new_block->data, block->data, AUDIO_BLOCK_SIZE_BYTES);
+        new_block->data_len = block->data_len;
+
+        audio_block_release(block);
+        *block_ptr = new_block;
+    }
+    return 0;
 }
 
 static void node_thread_entry(void *p1, void *p2, void *p3) {

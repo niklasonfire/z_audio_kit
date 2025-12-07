@@ -33,6 +33,18 @@ The system is built as a directed graph of "Nodes". A Node is an abstract entity
 | **Consumer (Sink)** | Consumes data | `Block -> (void)` | I2S DAC, Log Output, WAV Writer |
 | **Router** | Directs flow | `1-in -> N-out` | Splitter, Mixer |
 
+### 4. Zero-Copy & Copy-on-Write (CoW)
+To enable efficient "Fan-Out" (splitting one stream to multiple destinations), the framework uses reference counting.
+
+*   **Sharing:** The `Splitter` node increments the `ref_count` of a block and sends the *same pointer* to all outputs.
+*   **Safety (CoW):** Nodes that **modify** data (like `Volume`) must ensure they have exclusive access.
+    *   The helper `audio_block_get_writable(&block)` checks the `ref_count`.
+    *   If `ref_count > 1` (Shared), it allocates a **new block**, copies the data, releases the old block, and updates the pointer.
+    *   If `ref_count == 1` (Exclusive), it returns immediately (Zero-Copy).
+
+**⚠️ Warning: Copy Storm**
+If a Splitter feeds multiple modifying nodes, each node will trigger a copy. Ensure `CONFIG_AUDIO_MEM_SLAB_COUNT` is sufficient to handle this instantaneous spike in allocation.
+
 ---
 
 ## 📦 Directory Structure

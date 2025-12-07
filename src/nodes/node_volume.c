@@ -13,20 +13,10 @@ void vol_process(struct audio_node *self) {
     
     if (!block) return;
 
-    /* Copy-on-Write: If block is shared, duplicate it before modification */
-    if (atomic_get(&block->ref_count) > 1) {
-        struct audio_block *new_block = audio_block_alloc();
-        if (!new_block) {
-            /* Allocation failed; drop the frame */
-            audio_block_release(block); 
-            return;
-        }
-        
-        memcpy(new_block->data, block->data, AUDIO_BLOCK_SIZE_BYTES);
-        new_block->data_len = block->data_len;
-
+    /* Copy-on-Write: Use helper to ensure exclusive access */
+    if (audio_block_get_writable(&block) != 0) {
         audio_block_release(block);
-        block = new_block;
+        return;
     }
     
     for (size_t i = 0; i < block->data_len; i++) {

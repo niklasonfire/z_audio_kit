@@ -14,6 +14,11 @@
  *
  * This structure acts as a wrapper around the raw PCM data buffer.
  * It includes reference counting to allow zero-copy distribution to multiple nodes.
+ *
+ * @warning All data buffers must be allocated from the framework's memory slabs.
+ *          Do not wrap hardware DMA buffers directly without modifying the release logic.
+ *
+ * @warning If adding new fields, update audio_block_get_writable() to copy them.
  */
 struct audio_block {
     void *fifo_reserved;    /**< Required by Zephyr k_fifo */
@@ -74,6 +79,21 @@ struct audio_block *audio_block_alloc(void);
  * @param block Pointer to the audio block to release.
  */
 void audio_block_release(struct audio_block *block);
+
+/**
+ * @brief Ensures an audio block is writable (exclusive).
+ *
+ * Checks if the reference count is > 1. If so, it allocates a new block,
+ * copies the content, releases the old block, and updates the pointer.
+ * This implements Copy-on-Write (CoW).
+ *
+ * @warning Triggers memory allocation. Can fail if slab is full (Copy Storm risk).
+ * @warning Performs a shallow copy of metadata. Ensure struct updates are reflected here.
+ *
+ * @param block_ptr Address of the pointer to the audio block.
+ * @return 0 on success, -ENOMEM if allocation failed (pointer remains unchanged).
+ */
+int audio_block_get_writable(struct audio_block **block_ptr);
 
 /**
  * @brief Starts the processing thread for an audio node.
