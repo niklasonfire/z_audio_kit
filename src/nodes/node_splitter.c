@@ -11,7 +11,6 @@ struct splitter_ctx {
 void splitter_process(struct audio_node *self) {
     struct splitter_ctx *ctx = (struct splitter_ctx *)self->ctx;
     
-    // 1. Wait for input
     struct audio_block *block = k_fifo_get(&self->in_fifo, K_FOREVER);
     
     if (ctx->output_count == 0) {
@@ -19,14 +18,10 @@ void splitter_process(struct audio_node *self) {
         return;
     }
 
-    // 2. Increase Ref Count
-    // We already have 1 ref (from input). We need N refs total.
-    // So we add (N - 1).
     if (ctx->output_count > 1) {
         atomic_add(&block->ref_count, ctx->output_count - 1);
     }
 
-    // 3. Distribute Pointers (Zero Copy!)
     for (int i = 0; i < ctx->output_count; i++) {
         k_fifo_put(ctx->outputs[i], block);
     }
@@ -39,7 +34,7 @@ void node_splitter_init(struct audio_node *node) {
     node->ctx = k_malloc(sizeof(struct splitter_ctx));
     memset(node->ctx, 0, sizeof(struct splitter_ctx));
     k_fifo_init(&node->in_fifo);
-    node->out_fifo = NULL; // Splitter uses internal array
+    node->out_fifo = NULL; 
 }
 
 int node_splitter_add_output(struct audio_node *splitter, struct k_fifo *target_fifo) {

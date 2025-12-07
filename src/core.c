@@ -1,56 +1,45 @@
 #include "audio_fw.h"
 #include <zephyr/logging/log.h>
+#include <string.h>
 
 LOG_MODULE_REGISTER(audio_core, LOG_LEVEL_INF);
 
-// Define Memory Slab for Audio Data
 K_MEM_SLAB_DEFINE(audio_data_slab, AUDIO_BLOCK_SIZE_BYTES, CONFIG_AUDIO_MEM_SLAB_COUNT, 4);
+K_MEM_SLAB_DEFINE(audio_block_slab, sizeof(struct audio_block), CONFIG_AUDIO_MEM_SLAB_COUNT, 4);
 
 struct audio_block *audio_block_alloc(void) {
-    // 1. Allocate the metadata structure wrapper
-    struct audio_block *block = k_malloc(sizeof(struct audio_block));
-    if (!block) return NULL;
+    struct audio_block *block;
 
-    // 2. Allocate the heavy PCM data buffer from Slab
+    if (k_mem_slab_alloc(&audio_block_slab, (void **)&block, K_NO_WAIT) != 0) {
+        return NULL;
+    }
+
     if (k_mem_slab_alloc(&audio_data_slab, (void **)&block->data, K_NO_WAIT) == 0) {
         memset(block->data, 0, AUDIO_BLOCK_SIZE_BYTES);
         block->data_len = CONFIG_AUDIO_BLOCK_SAMPLES;
-        atomic_set(&block->ref_count, 1); // Init with 1 owner
+        atomic_set(&block->ref_count, 1);
         return block;
     }
     
-    // Cleanup if slab alloc failed
-    k_free(block);
+    k_mem_slab_free(&audio_block_slab, (void *)block);
     return NULL;
 }
 
 void audio_block_release(struct audio_block *block) {
-    // 1. Grundlegender Sicherheitscheck
     if (!block) return;
 
     atomic_val_t old_count = atomic_dec(&block->ref_count);
     atomic_val_t new_count = old_count - 1;
 
     if (new_count == 0) { 
-        // Wir sind der letzte Besitzer. Aufräumen!
-
-        // --- SCHRITT 1: Daten (Slab) freigeben ---
         if (block->data != NULL) {
-            // Korrekt: Zeiger auf den Slab, Zeiger auf die Daten (ohne & bei block->data)
             k_mem_slab_free(&audio_data_slab, (void *)block->data);
-            block->data = NULL; // Sauberkeit
+            block->data = NULL;
         }
-
-        // --- SCHRITT 2: Wrapper (Heap) freigeben ---
-        // Da du oben k_malloc() benutzt hast, MUSS hier k_free() stehen.
-        k_free(block); 
+        k_mem_slab_free(&audio_block_slab, (void *)block); 
     }
 }
 
-
-
-
-// Thread Entry Point Wrapper
 static void node_thread_entry(void *p1, void *p2, void *p3) {
     struct audio_node *node = (struct audio_node *)p1;
     if (node->vtable && node->vtable->process) {
@@ -71,7 +60,6 @@ void audio_node_push_output(struct audio_node *self, struct audio_block *block) 
     if (self->out_fifo) {
         k_fifo_put(self->out_fifo, block);
     } else {
-        // Dead end: Release block immediately
         audio_block_release(block);
     }
 }
