@@ -49,7 +49,7 @@ void main(void) {
             for(int i=0; i<30; i++) bar[i] = (i < bars) ? '#' : '.';
             bar[30] = '\0';
 
-            printk("\r[%%s] RMS: %%6.1f dB | Peak: %%6.1f dB %%s", 
+            printk("\r[%s] RMS: %6.1f dB | Peak: %6.1f dB %s", 
                    bar, 
                    (double)stats.rms_db, 
                    (double)stats.peak_db,
