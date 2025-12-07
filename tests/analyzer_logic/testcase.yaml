@@ -1,0 +1,3 @@
+tests:
+  audio.analyzer:
+    tags: audio framework logic

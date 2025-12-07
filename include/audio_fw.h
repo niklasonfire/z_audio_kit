@@ -157,4 +157,36 @@ void node_splitter_init(struct audio_node *node);
  */
 int node_splitter_add_output(struct audio_node *splitter, struct k_fifo *target_fifo);
 
+/**
+ * @brief Statistics structure for the Analyzer Node.
+ */
+struct analyzer_stats {
+    float rms_db;       /**< RMS level in dBFS (e.g., -20.0 to 0.0) */
+    float peak_db;      /**< Peak level in dBFS */
+    bool clipping;      /**< True if any sample hit min/max range */
+};
+
+/**
+ * @brief Initializes an analyzer (metering) node.
+ * 
+ * This is a pass-through node that calculates statistics on the audio stream
+ * without modifying it.
+ *
+ * @param node Pointer to the node structure.
+ * @param smoothing_factor Value between 0.0 (no smoothing) and 0.99 (heavy smoothing) for RMS calculation.
+ */
+void node_analyzer_init(struct audio_node *node, float smoothing_factor);
+
+/**
+ * @brief Retrieves the latest statistics from the analyzer.
+ *
+ * This function is thread-safe and can be called from the main thread 
+ * or UI thread.
+ *
+ * @param node Pointer to the analyzer node.
+ * @param stats Pointer to the destination struct to write statistics into.
+ * @return 0 on success, negative on error.
+ */
+int node_analyzer_get_stats(struct audio_node *node, struct analyzer_stats *stats);
+
 #endif // AUDIO_FW_H
