@@ -114,8 +114,11 @@ jobs:
       - name: Run test on native_sim
         if: matrix.board == 'native_sim'
         run: |
-          chmod +x build/zephyr/zephyr.exe
-          timeout 120 ./build/zephyr/zephyr.exe || echo "Test completed"
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            timeout 120 ./build/zephyr/zephyr.exe || echo "Test completed"
 
       - name: Upload test artifacts
         if: always()
