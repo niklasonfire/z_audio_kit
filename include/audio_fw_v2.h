@@ -187,13 +187,58 @@ int node_analyzer_get_stats(struct audio_node *node, struct analyzer_stats *stat
 // ============================================================================
 
 /**
- * @brief Initializes a spectrum analyzer node.
+ * @brief Window function types for spectrum analyzer
+ */
+enum spectrum_window_type {
+    SPECTRUM_WINDOW_RECTANGULAR,  // No window (for transient analysis)
+    SPECTRUM_WINDOW_HANN,         // Hann window (good general purpose)
+    SPECTRUM_WINDOW_HAMMING,      // Hamming window (slightly better sidelobe)
+    SPECTRUM_WINDOW_BLACKMAN,     // Blackman window (best sidelobe suppression)
+    SPECTRUM_WINDOW_FLAT_TOP,     // Flat-top (best amplitude accuracy)
+};
+
+/**
+ * @brief Configuration for spectrum analyzer
+ */
+struct spectrum_analyzer_config {
+    size_t fft_size;                    // FFT size (must be power of 2)
+    size_t hop_size;                    // Hop size (0 = non-overlapping)
+    enum spectrum_window_type window;    // Window function type
+    bool compute_phase;                  // Whether to compute phase spectrum
+    float magnitude_floor_db;            // Floor for magnitude in dB
+};
+
+/**
+ * @brief Default configuration macro
+ */
+#define SPECTRUM_ANALYZER_DEFAULT_CONFIG {      \
+    .fft_size = 1024,                           \
+    .hop_size = 0,                              \
+    .window = SPECTRUM_WINDOW_HANN,             \
+    .compute_phase = false,                     \
+    .magnitude_floor_db = -120.0f,              \
+}
+
+/**
+ * @brief Initializes a spectrum analyzer node with configuration.
  *
- * This node demonstrates processing with large windows (>128 samples).
- * It accumulates samples until buffer is full, then computes FFT.
+ * This node uses CMSIS-DSP on ARM platforms for optimized FFT,
+ * falls back to basic implementation on other platforms.
  *
  * @param node Pointer to the node structure.
- * @param fft_size FFT size in samples (must be power of 2, max 1024).
+ * @param config Pointer to configuration (NULL for default).
+ * @return 0 on success, negative error code on failure.
+ */
+int node_spectrum_analyzer_init_ex(struct audio_node *node,
+                                    const struct spectrum_analyzer_config *config);
+
+/**
+ * @brief Initializes a spectrum analyzer node with default config.
+ *
+ * Simplified initialization - uses Hann window, no overlap.
+ *
+ * @param node Pointer to the node structure.
+ * @param fft_size FFT size in samples (must be power of 2, max 2048).
  */
 void node_spectrum_analyzer_init(struct audio_node *node, size_t fft_size);
 
@@ -222,6 +267,30 @@ int node_spectrum_analyzer_get_spectrum_db(struct audio_node *node,
                                            float *spectrum_db_out,
                                            size_t out_size,
                                            float reference);
+
+/**
+ * @brief Get phase spectrum (only if enabled in config).
+ *
+ * @param node Pointer to the spectrum analyzer node.
+ * @param phase_out Output buffer for phase values (radians).
+ * @param out_size Size of output buffer.
+ * @return 0 on success, -EAGAIN if not ready, -ENOTSUP if not enabled, -EINVAL on error.
+ */
+int node_spectrum_analyzer_get_phase(struct audio_node *node,
+                                     float *phase_out,
+                                     size_t out_size);
+
+/**
+ * @brief Get peak frequency and magnitude.
+ *
+ * @param node Pointer to the spectrum analyzer node.
+ * @param peak_freq_out Output for peak frequency in Hz (can be NULL).
+ * @param peak_mag_out Output for peak magnitude (can be NULL).
+ * @return 0 on success, -EAGAIN if not ready, -EINVAL on error.
+ */
+int node_spectrum_analyzer_get_peak(struct audio_node *node,
+                                    float *peak_freq_out,
+                                    float *peak_mag_out);
 
 /**
  * @brief Convert bin index to frequency in Hz.
