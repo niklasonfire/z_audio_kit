@@ -182,4 +182,65 @@ void node_analyzer_init(struct audio_node *node, float smoothing_factor);
  */
 int node_analyzer_get_stats(struct audio_node *node, struct analyzer_stats *stats);
 
+// ============================================================================
+// Spectrum Analyzer Node (Large Window Example)
+// ============================================================================
+
+/**
+ * @brief Initializes a spectrum analyzer node.
+ *
+ * This node demonstrates processing with large windows (>128 samples).
+ * It accumulates samples until buffer is full, then computes FFT.
+ *
+ * @param node Pointer to the node structure.
+ * @param fft_size FFT size in samples (must be power of 2, max 1024).
+ */
+void node_spectrum_analyzer_init(struct audio_node *node, size_t fft_size);
+
+/**
+ * @brief Get the magnitude spectrum.
+ *
+ * @param node Pointer to the spectrum analyzer node.
+ * @param spectrum_out Output buffer for magnitude values.
+ * @param out_size Size of output buffer (typically fft_size/2).
+ * @return 0 on success, -EAGAIN if not ready, -EINVAL on error.
+ */
+int node_spectrum_analyzer_get_spectrum(struct audio_node *node,
+                                        float *spectrum_out,
+                                        size_t out_size);
+
+/**
+ * @brief Get the spectrum in dB scale.
+ *
+ * @param node Pointer to the spectrum analyzer node.
+ * @param spectrum_db_out Output buffer for dB values.
+ * @param out_size Size of output buffer.
+ * @param reference Reference level for dB calculation (typically 1.0).
+ * @return 0 on success, -EAGAIN if not ready, -EINVAL on error.
+ */
+int node_spectrum_analyzer_get_spectrum_db(struct audio_node *node,
+                                           float *spectrum_db_out,
+                                           size_t out_size,
+                                           float reference);
+
+/**
+ * @brief Convert bin index to frequency in Hz.
+ *
+ * @param bin_index Frequency bin index.
+ * @param fft_size FFT size used.
+ * @param sample_rate Sample rate in Hz.
+ * @return Frequency in Hz.
+ */
+float spectrum_analyzer_bin_to_freq(size_t bin_index,
+                                    size_t fft_size,
+                                    uint32_t sample_rate);
+
+/**
+ * @brief Get number of FFTs computed.
+ *
+ * @param node Pointer to the spectrum analyzer node.
+ * @return Number of FFT computations performed.
+ */
+uint32_t node_spectrum_analyzer_get_process_count(struct audio_node *node);
+
 #endif // AUDIO_FW_V2_H
