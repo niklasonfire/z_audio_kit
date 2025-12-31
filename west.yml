@@ -12,7 +12,7 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject-rtos
-      revision: v3.6.0  # or latest stable version
+      revision: v3.6.0
       import:
         # Import Zephyr's west dependencies (HALs, modules, etc.)
         name-allowlist:
@@ -24,4 +24,4 @@ manifest:
 
   # Mark this repository as the manifest repository
   self:
-    path: audio_kit
+    path: .
