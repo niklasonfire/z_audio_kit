@@ -1,0 +1,198 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop, claude/** ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci:v0.26.13
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - native_sim
+          - qemu_cortex_m3
+        sample:
+          - basic_sine
+          - metering_console
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: audio_kit
+
+      - name: Initialize Zephyr workspace
+        working-directory: audio_kit
+        run: |
+          west init -l .
+          west update --narrow -o=--depth=1
+          west zephyr-export
+
+      - name: Build ${{ matrix.sample }} for ${{ matrix.board }}
+        working-directory: audio_kit
+        run: |
+          west build -b ${{ matrix.board }} samples/${{ matrix.sample }} -p
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.board }}-${{ matrix.sample }}
+          path: audio_kit/build/zephyr/zephyr.*
+          retention-days: 5
+
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci:v0.26.13
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - native_sim
+          - qemu_cortex_m3
+        test:
+          - analyzer_logic
+          - cow_integrity
+          - memory_check
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: audio_kit
+
+      - name: Initialize Zephyr workspace
+        working-directory: audio_kit
+        run: |
+          west init -l .
+          west update --narrow -o=--depth=1
+          west zephyr-export
+
+      - name: Build test ${{ matrix.test }} for ${{ matrix.board }}
+        working-directory: audio_kit
+        run: |
+          west build -b ${{ matrix.board }} tests/${{ matrix.test }} -p
+
+      - name: Run test on native_sim
+        if: matrix.board == 'native_sim'
+        working-directory: audio_kit
+        run: |
+          ./build/zephyr/zephyr.exe
+        timeout-minutes: 2
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-${{ matrix.board }}-${{ matrix.test }}
+          path: audio_kit/build/zephyr/zephyr.*
+          retention-days: 5
+
+  build-v2-examples:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci:v0.26.13
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - native_sim
+          - qemu_cortex_m3
+        example:
+          - example_channel_strip
+          - example_standalone_nodes
+          - example_spectrum_analyzer
+          - example_spectrum_analyzer_advanced
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: audio_kit
+
+      - name: Initialize Zephyr workspace
+        working-directory: audio_kit
+        run: |
+          west init -l .
+          west update --narrow -o=--depth=1
+          west zephyr-export
+
+      - name: Create build directory for ${{ matrix.example }}
+        working-directory: audio_kit
+        run: |
+          mkdir -p examples_build/${{ matrix.example }}
+          cd examples_build/${{ matrix.example }}
+
+          # Create CMakeLists.txt
+          cat > CMakeLists.txt << 'EOF'
+          cmake_minimum_required(VERSION 3.20.0)
+          find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+          project(${{ matrix.example }})
+
+          target_sources(app PRIVATE ../../examples/${{ matrix.example }}.c)
+
+          if(TARGET z_audio_kit)
+              target_link_libraries(app PRIVATE z_audio_kit)
+          endif()
+          EOF
+
+          # Create prj.conf
+          cat > prj.conf << 'EOF'
+          CONFIG_LOG=y
+          CONFIG_PRINTK=y
+          CONFIG_STDOUT_CONSOLE=y
+          CONFIG_SERIAL=y
+          CONFIG_HEAP_MEM_POOL_SIZE=131072
+          CONFIG_FPU=y
+          CONFIG_AUDIO_FRAMEWORK=y
+          CONFIG_AUDIO_BLOCK_SAMPLES=128
+          CONFIG_AUDIO_SAMPLE_RATE=48000
+          CONFIG_AUDIO_MEM_SLAB_COUNT=16
+          CONFIG_AUDIO_THREAD_STACK_SIZE=2048
+          CONFIG_AUDIO_THREAD_PRIORITY=7
+
+          # For spectrum analyzer with CMSIS-DSP on ARM
+          CONFIG_CMSIS_DSP=y
+          CONFIG_CMSIS_DSP_TRANSFORM=y
+          EOF
+
+      - name: Build ${{ matrix.example }} for ${{ matrix.board }}
+        working-directory: audio_kit/examples_build/${{ matrix.example }}
+        run: |
+          west build -b ${{ matrix.board }} . -p
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-${{ matrix.board }}-${{ matrix.example }}
+          path: audio_kit/examples_build/${{ matrix.example }}/build/zephyr/zephyr.*
+          retention-days: 5
+
+  build-summary:
+    runs-on: ubuntu-latest
+    needs: [build, test, build-v2-examples]
+    if: always()
+    steps:
+      - name: Check build results
+        run: |
+          echo "Build job status: ${{ needs.build.result }}"
+          echo "Test job status: ${{ needs.test.result }}"
+          echo "V2 Examples job status: ${{ needs.build-v2-examples.result }}"
+
+          if [ "${{ needs.build.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.build-v2-examples.result }}" != "success" ]; then
+            echo "❌ Some builds or tests failed"
+            exit 1
+          else
+            echo "✅ All builds and tests passed"
+          fi
