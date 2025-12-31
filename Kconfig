@@ -3,7 +3,7 @@ menu "Audio Framework"
 config AUDIO_FRAMEWORK
     bool "Enable Audio Framework"
     default y
-    select FPU # Audio braucht Floating Point Unit
+    select FPU if CPU_HAS_FPU # Only enable FPU if the CPU supports it
 
 if AUDIO_FRAMEWORK
 
