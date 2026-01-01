@@ -40,14 +40,14 @@ jobs:
 
       - name: Pull Zephyr CI container
         run: |
-          docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
+          docker pull ghcr.io/zephyrproject-rtos/ci:v0.27.4
 
       - name: Setup workspace and build
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            ghcr.io/zephyrproject-rtos/ci:v0.27.4 \
             bash -c "
               west init -l .
               west update --narrow -o=--depth=1
@@ -95,14 +95,14 @@ jobs:
 
       - name: Pull Zephyr CI container
         run: |
-          docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
+          docker pull ghcr.io/zephyrproject-rtos/ci:v0.27.4
 
       - name: Setup workspace and build test
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            ghcr.io/zephyrproject-rtos/ci:v0.27.4 \
             bash -c "
               west init -l .
               west update --narrow -o=--depth=1
@@ -115,7 +115,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            ghcr.io/zephyrproject-rtos/ci:v0.27.4 \
             timeout 120 ./build/zephyr/zephyr.exe || echo "Test completed"
 
       - name: Upload test artifacts
