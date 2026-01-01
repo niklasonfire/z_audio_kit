@@ -69,9 +69,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 2  # Limit parallel jobs
       matrix:
-        board: [native_sim, qemu_cortex_m3]
+        board: [native_sim]  # TODO: Add qemu_cortex_m3 when testing ARM-specific code (CMSIS-DSP)
         test: [analyzer_logic, cow_integrity, memory_check, node_sine]
 
     steps:
@@ -111,8 +110,7 @@ jobs:
               west build -b ${{ matrix.board }} tests/${{ matrix.test }} -p
             "
 
-      - name: Run test on native_sim
-        if: matrix.board == 'native_sim'
+      - name: Run test
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
