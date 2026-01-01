@@ -72,7 +72,7 @@ jobs:
       max-parallel: 2  # Limit parallel jobs
       matrix:
         board: [native_sim, qemu_cortex_m3]
-        test: [analyzer_logic, cow_integrity, memory_check]
+        test: [analyzer_logic, cow_integrity, memory_check, node_sine]
 
     steps:
       - name: Free up disk space on host
