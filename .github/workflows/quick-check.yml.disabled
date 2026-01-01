@@ -1,0 +1,33 @@
+name: Quick Build Check
+
+on:
+  push:
+    branches: [ claude/** ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  quick-build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci:v0.26.13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: audio_kit
+
+      - name: Initialize Zephyr workspace
+        working-directory: audio_kit
+        run: |
+          west init -l .
+          west update --narrow -o=--depth=1
+          west zephyr-export
+
+      - name: Quick build check - basic_sine on native_sim
+        working-directory: audio_kit
+        run: |
+          west build -b native_sim samples/basic_sine -p
+
+      - name: Build succeeded
+        run: echo "✅ Quick build check passed"

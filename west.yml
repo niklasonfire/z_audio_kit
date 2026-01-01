@@ -1,0 +1,27 @@
+# Zephyr workspace manifest for z_audio_kit
+# This file enables west workspace initialization for development and CI
+
+manifest:
+  version: "0.13"
+
+  # West will fetch Zephyr and its dependencies
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: v3.6.0
+      import:
+        # Import Zephyr's west dependencies (HALs, modules, etc.)
+        name-allowlist:
+          - cmsis      # For CMSIS-DSP
+          - hal_stm32
+          - hal_nxp
+          - segger
+          - TraceRecorder
+
+  # Mark this repository as the manifest repository
+  self:
+    path: .
