@@ -10,6 +10,8 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#define M_PI_F 3.14159265358979323846f
+
 /**
  * @brief Private context for sine generator
  */
@@ -43,8 +45,8 @@ static struct audio_block* sine_process(struct audio_node *self, struct audio_bl
 
         // Advance phase
         ctx->phase += ctx->phase_increment;
-        if (ctx->phase >= 2.0f * M_PI) {
-            ctx->phase -= 2.0f * M_PI;
+        if (ctx->phase >= 2.0f * M_PI_F) {
+            ctx->phase -= 2.0f * M_PI_F;
         }
     }
 
@@ -82,7 +84,7 @@ void node_sine_init(struct audio_node *node, float freq)
     struct sine_ctx *ctx = &sine_contexts[sine_ctx_index++];
     ctx->frequency = freq;
     ctx->phase = 0.0f;
-    ctx->phase_increment = (2.0f * M_PI * freq) / CONFIG_AUDIO_SAMPLE_RATE;
+    ctx->phase_increment = (2.0f * M_PI_F * freq) / CONFIG_AUDIO_SAMPLE_RATE;
 
     node->vtable = &sine_api;
     node->ctx = ctx;

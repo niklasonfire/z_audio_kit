@@ -26,38 +26,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-/**
- * @brief Window function types
- */
-enum spectrum_window_type {
-    SPECTRUM_WINDOW_RECTANGULAR,  // No window (for transient analysis)
-    SPECTRUM_WINDOW_HANN,         // Hann window (good general purpose)
-    SPECTRUM_WINDOW_HAMMING,      // Hamming window (slightly better sidelobe)
-    SPECTRUM_WINDOW_BLACKMAN,     // Blackman window (best sidelobe suppression)
-    SPECTRUM_WINDOW_FLAT_TOP,     // Flat-top (best amplitude accuracy)
-};
-
-/**
- * @brief Configuration for spectrum analyzer
- */
-struct spectrum_analyzer_config {
-    size_t fft_size;                    // FFT size (must be power of 2)
-    size_t hop_size;                    // Hop size (0 = non-overlapping)
-    enum spectrum_window_type window;    // Window function type
-    bool compute_phase;                  // Whether to compute phase spectrum
-    float magnitude_floor_db;            // Floor for magnitude in dB (-inf if 0)
-};
-
-/**
- * @brief Default configuration: 1024 FFT, Hann window, no overlap
- */
-#define SPECTRUM_ANALYZER_DEFAULT_CONFIG {      \
-    .fft_size = 1024,                           \
-    .hop_size = 0,                              \
-    .window = SPECTRUM_WINDOW_HANN,             \
-    .compute_phase = false,                     \
-    .magnitude_floor_db = -120.0f,              \
-}
+#define M_PI_F 3.14159265358979323846f
 
 /**
  * @brief Maximum supported FFT size
@@ -117,13 +86,13 @@ static void generate_window(float *window,
 
         case SPECTRUM_WINDOW_HANN:
             for (size_t i = 0; i < size; i++) {
-                window[i] = 0.5f * (1.0f - cosf(2.0f * M_PI * i / (size - 1)));
+                window[i] = 0.5f * (1.0f - cosf(2.0f * M_PI_F * i / (size - 1)));
             }
             break;
 
         case SPECTRUM_WINDOW_HAMMING:
             for (size_t i = 0; i < size; i++) {
-                window[i] = 0.54f - 0.46f * cosf(2.0f * M_PI * i / (size - 1));
+                window[i] = 0.54f - 0.46f * cosf(2.0f * M_PI_F * i / (size - 1));
             }
             break;
 
@@ -132,8 +101,8 @@ static void generate_window(float *window,
                 float a0 = 0.42f;
                 float a1 = 0.5f;
                 float a2 = 0.08f;
-                window[i] = a0 - a1 * cosf(2.0f * M_PI * i / (size - 1))
-                              + a2 * cosf(4.0f * M_PI * i / (size - 1));
+                window[i] = a0 - a1 * cosf(2.0f * M_PI_F * i / (size - 1))
+                              + a2 * cosf(4.0f * M_PI_F * i / (size - 1));
             }
             break;
 
@@ -144,10 +113,10 @@ static void generate_window(float *window,
                 float a2 = 1.29f;
                 float a3 = 0.388f;
                 float a4 = 0.028f;
-                window[i] = a0 - a1 * cosf(2.0f * M_PI * i / (size - 1))
-                              + a2 * cosf(4.0f * M_PI * i / (size - 1))
-                              - a3 * cosf(6.0f * M_PI * i / (size - 1))
-                              + a4 * cosf(8.0f * M_PI * i / (size - 1));
+                window[i] = a0 - a1 * cosf(2.0f * M_PI_F * i / (size - 1))
+                              + a2 * cosf(4.0f * M_PI_F * i / (size - 1))
+                              - a3 * cosf(6.0f * M_PI_F * i / (size - 1))
+                              + a4 * cosf(8.0f * M_PI_F * i / (size - 1));
             }
             break;
     }
