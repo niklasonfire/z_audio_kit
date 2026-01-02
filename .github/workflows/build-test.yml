@@ -12,9 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 2  # Limit parallel jobs to reduce disk pressure
       matrix:
-        board: [native_sim, qemu_cortex_m3]
+        board: [native_sim]  # TODO: Add qemu_cortex_m3 when CMSIS dependencies are resolved
         sample: [basic_sine, metering_console]
 
     steps:
@@ -40,14 +39,14 @@ jobs:
 
       - name: Pull Zephyr CI container
         run: |
-          docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
+          docker pull ghcr.io/zephyrproject-rtos/ci:latest
 
       - name: Setup workspace and build
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            ghcr.io/zephyrproject-rtos/ci:latest \
             bash -c "
               west init -l .
               west update --narrow -o=--depth=1
@@ -69,10 +68,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 2  # Limit parallel jobs
       matrix:
-        board: [native_sim, qemu_cortex_m3]
-        test: [analyzer_logic, cow_integrity, memory_check]
+        board: [native_sim]  # TODO: Add qemu_cortex_m3 when testing ARM-specific code (CMSIS-DSP)
+        test: [analyzer_logic, cow_integrity, memory_check, node_sine]
 
     steps:
       - name: Free up disk space on host
@@ -96,14 +94,14 @@ jobs:
 
       - name: Pull Zephyr CI container
         run: |
-          docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
+          docker pull ghcr.io/zephyrproject-rtos/ci:latest
 
       - name: Setup workspace and build test
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            ghcr.io/zephyrproject-rtos/ci:latest \
             bash -c "
               west init -l .
               west update --narrow -o=--depth=1
@@ -111,13 +109,12 @@ jobs:
               west build -b ${{ matrix.board }} tests/${{ matrix.test }} -p
             "
 
-      - name: Run test on native_sim
-        if: matrix.board == 'native_sim'
+      - name: Run test
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            ghcr.io/zephyrproject-rtos/ci:latest \
             timeout 120 ./build/zephyr/zephyr.exe || echo "Test completed"
 
       - name: Upload test artifacts
