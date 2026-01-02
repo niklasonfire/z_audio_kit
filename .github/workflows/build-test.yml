@@ -49,12 +49,13 @@ jobs:
 
       - name: Create workspace tarball
         run: |
-          # Archive only necessary files, ignore warnings about file changes
-          tar --warning=no-file-changed -czf zephyr-workspace.tar.gz \
+          # Archive workspace, ignore exit code 1 (warnings about changed files)
+          # Exit code 2 indicates actual errors
+          tar -czf zephyr-workspace.tar.gz \
             --exclude='.git' \
             --exclude='build' \
             --exclude='*.tar.gz' \
-            .
+            . || (( $? == 1 ))
 
       - name: Upload workspace artifact
         uses: actions/upload-artifact@v4
