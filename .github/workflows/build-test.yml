@@ -1,4 +1,4 @@
-name: Build and Test (Disk Optimized)
+name: Build and Test (Optimized)
 
 on:
   push:
@@ -8,22 +8,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-samples:
+  setup:
+    name: Setup Zephyr Environment
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 2  # Limit parallel jobs to reduce disk pressure
-      matrix:
-        board: [native_sim, qemu_cortex_m3]
-        sample: [basic_sine, metering_console]
-
     steps:
-      - name: Free up disk space on host
+      - name: Free up disk space
         run: |
           echo "=== Disk space before cleanup ==="
           df -h
 
-          echo "=== Cleaning up unnecessary files ==="
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
@@ -35,14 +28,14 @@ jobs:
           echo "=== Disk space after cleanup ==="
           df -h
 
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Pull Zephyr CI container
         run: |
           docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
 
-      - name: Setup workspace and build
+      - name: Initialize Zephyr workspace
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
@@ -52,66 +45,115 @@ jobs:
               west init -l .
               west update --narrow -o=--depth=1
               west zephyr-export
-              west build -b ${{ matrix.board }} samples/${{ matrix.sample }} -p
             "
 
-      - name: Upload build artifacts
+      - name: Create workspace tarball
+        run: |
+          tar -czf zephyr-workspace.tar.gz \
+            --exclude='.git' \
+            --exclude='build' \
+            .
+
+      - name: Upload workspace artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zephyr-workspace
+          path: zephyr-workspace.tar.gz
+          retention-days: 1
+
+  build-samples:
+    name: Build Samples
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [native_sim, qemu_cortex_m3]
+
+    steps:
+      - name: Download workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: zephyr-workspace
+
+      - name: Extract workspace
+        run: |
+          tar -xzf zephyr-workspace.tar.gz
+          rm zephyr-workspace.tar.gz
+
+      - name: Pull Zephyr CI container
+        run: |
+          docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
+
+      - name: Build basic_sine for ${{ matrix.board }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            bash -c "
+              west build -b ${{ matrix.board }} samples/basic_sine -p
+            "
+
+      - name: Upload basic_sine build
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.board }}-${{ matrix.sample }}
-          path: |
-            build/zephyr/zephyr.elf
-            build/zephyr/zephyr.hex
+          name: build-${{ matrix.board }}-basic_sine
+          path: build/zephyr/zephyr.*
           retention-days: 5
 
-  build-tests:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 2  # Limit parallel jobs
-      matrix:
-        board: [native_sim, qemu_cortex_m3]
-        test: [analyzer_logic, cow_integrity, memory_check, spectrum_analyzer_v2]
-
-    steps:
-      - name: Free up disk space on host
-        run: |
-          echo "=== Disk space before cleanup ==="
-          df -h
-
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo apt-get clean
-
-          echo "=== Disk space after cleanup ==="
-          df -h
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Pull Zephyr CI container
-        run: |
-          docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
-
-      - name: Setup workspace and build test
+      - name: Build metering_console for ${{ matrix.board }}
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
             bash -c "
-              west init -l .
-              west update --narrow -o=--depth=1
-              west zephyr-export
-              west build -b ${{ matrix.board }} tests/${{ matrix.test }} -p
+              west build -b ${{ matrix.board }} samples/metering_console -p
             "
 
-      - name: Run test on native_sim
+      - name: Upload metering_console build
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.board }}-metering_console
+          path: build/zephyr/zephyr.*
+          retention-days: 5
+
+  build-tests:
+    name: Build and Run Tests
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [native_sim, qemu_cortex_m3]
+
+    steps:
+      - name: Download workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: zephyr-workspace
+
+      - name: Extract workspace
+        run: |
+          tar -xzf zephyr-workspace.tar.gz
+          rm zephyr-workspace.tar.gz
+
+      - name: Pull Zephyr CI container
+        run: |
+          docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
+
+      - name: Build analyzer_logic for ${{ matrix.board }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            bash -c "west build -b ${{ matrix.board }} tests/analyzer_logic -p"
+
+      - name: Run analyzer_logic test on native_sim
         if: matrix.board == 'native_sim'
         run: |
           docker run --rm \
@@ -120,29 +162,103 @@ jobs:
             ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
             timeout 120 ./build/zephyr/zephyr.exe || echo "Test completed"
 
-      - name: Upload test artifacts
+      - name: Upload analyzer_logic artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-${{ matrix.board }}-${{ matrix.test }}
-          path: |
-            build/zephyr/zephyr.elf
-            build/zephyr/zephyr.hex
+          name: test-${{ matrix.board }}-analyzer_logic
+          path: build/zephyr/zephyr.*
           retention-days: 5
 
-  build-summary:
+      - name: Build cow_integrity for ${{ matrix.board }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            bash -c "west build -b ${{ matrix.board }} tests/cow_integrity -p"
+
+      - name: Run cow_integrity test on native_sim
+        if: matrix.board == 'native_sim'
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            timeout 120 ./build/zephyr/zephyr.exe || echo "Test completed"
+
+      - name: Upload cow_integrity artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-${{ matrix.board }}-cow_integrity
+          path: build/zephyr/zephyr.*
+          retention-days: 5
+
+      - name: Build memory_check for ${{ matrix.board }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            bash -c "west build -b ${{ matrix.board }} tests/memory_check -p"
+
+      - name: Run memory_check test on native_sim
+        if: matrix.board == 'native_sim'
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            timeout 120 ./build/zephyr/zephyr.exe || echo "Test completed"
+
+      - name: Upload memory_check artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-${{ matrix.board }}-memory_check
+          path: build/zephyr/zephyr.*
+          retention-days: 5
+
+      - name: Build spectrum_analyzer_v2 for ${{ matrix.board }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            bash -c "west build -b ${{ matrix.board }} tests/spectrum_analyzer_v2 -p"
+
+      - name: Run spectrum_analyzer_v2 test on native_sim
+        if: matrix.board == 'native_sim'
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
+            timeout 120 ./build/zephyr/zephyr.exe || echo "Test completed"
+
+      - name: Upload spectrum_analyzer_v2 artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-${{ matrix.board }}-spectrum_analyzer_v2
+          path: build/zephyr/zephyr.*
+          retention-days: 5
+
+  summary:
+    name: Build Summary
     runs-on: ubuntu-latest
     needs: [build-samples, build-tests]
     if: always()
     steps:
       - name: Check build results
         run: |
-          echo "Samples: ${{ needs.build-samples.result }}"
-          echo "Tests: ${{ needs.build-tests.result }}"
+          echo "🔧 Samples: ${{ needs.build-samples.result }}"
+          echo "🧪 Tests: ${{ needs.build-tests.result }}"
 
           if [ "${{ needs.build-samples.result }}" != "success" ] || \
              [ "${{ needs.build-tests.result }}" != "success" ]; then
             echo "❌ Build failed"
             exit 1
           fi
-          echo "✅ All builds passed"
+          echo "✅ All builds passed!"
