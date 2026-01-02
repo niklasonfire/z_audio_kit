@@ -15,6 +15,8 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#define M_PI_F 3.14159265358979323846f
+
 #define TOLERANCE 0.1f  // 10% tolerance for floating-point comparisons
 
 static void *setup(void) {
@@ -28,15 +30,15 @@ ZTEST_SUITE(spectrum_analyzer_v2, NULL, setup, NULL, NULL, NULL);
  */
 static void fill_block_sine(struct audio_block *block, float frequency, float *phase)
 {
-    float phase_increment = (2.0f * M_PI * frequency) / CONFIG_AUDIO_SAMPLE_RATE;
+    float phase_increment = (2.0f * M_PI_F * frequency) / CONFIG_AUDIO_SAMPLE_RATE;
 
     for (size_t i = 0; i < block->data_len; i++) {
         float sample = sinf(*phase) * INT16_MAX * 0.5f;  // 50% amplitude
         block->data[i] = (int16_t)sample;
 
         *phase += phase_increment;
-        if (*phase >= 2.0f * M_PI) {
-            *phase -= 2.0f * M_PI;
+        if (*phase >= 2.0f * M_PI_F) {
+            *phase -= 2.0f * M_PI_F;
         }
     }
 }
@@ -353,7 +355,7 @@ ZTEST(spectrum_analyzer_v2, test_phase_spectrum)
     if (ret == 0) {
         // Phase values should be in range [-π, π]
         for (size_t i = 0; i < 128; i++) {
-            zassert_true(phase_spectrum[i] >= -M_PI && phase_spectrum[i] <= M_PI,
+            zassert_true(phase_spectrum[i] >= -M_PI_F && phase_spectrum[i] <= M_PI_F,
                 "Phase bin %d out of range: %f", i, (double)phase_spectrum[i]);
         }
     } else if (ret == -ENOTSUP) {
@@ -466,9 +468,6 @@ ZTEST(spectrum_analyzer_v2, test_reset)
 
     struct audio_block *out = audio_node_process(&analyzer, block);
     audio_block_release(out);
-
-    // Get process count
-    uint32_t count_before = node_spectrum_analyzer_get_process_count(&analyzer);
 
     // Reset
     audio_node_reset(&analyzer);
