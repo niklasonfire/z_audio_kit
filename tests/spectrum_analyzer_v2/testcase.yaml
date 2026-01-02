@@ -1,0 +1,12 @@
+tests:
+  audio.spectrum_analyzer_v2.native:
+    tags: audio spectrum fft
+    platform_allow: native_sim
+    integration_platforms:
+      - native_sim
+
+  audio.spectrum_analyzer_v2.arm:
+    tags: audio spectrum fft cmsis-dsp arm
+    platform_allow: qemu_cortex_m3
+    integration_platforms:
+      - qemu_cortex_m3
