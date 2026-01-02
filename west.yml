@@ -16,7 +16,8 @@ manifest:
       import:
         # Import Zephyr's west dependencies (HALs, modules, etc.)
         name-allowlist:
-          - cmsis      # For CMSIS-DSP
+          - cmsis      # CMSIS Core headers
+          - cmsis-dsp  # CMSIS-DSP library (for ARM FFT)
           - hal_stm32
           - hal_nxp
           - segger
