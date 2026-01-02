@@ -107,10 +107,10 @@ ZTEST(spectrum_analyzer_v2, test_init_invalid_fft_size)
     int ret = node_spectrum_analyzer_init_ex(&analyzer, &config);
     zassert_not_equal(ret, 0, "Non-power-of-2 FFT should fail");
 
-    // Too large
-    config.fft_size = 4096;
+    // Too large (MAX_FFT_SIZE is 512)
+    config.fft_size = 1024;
     ret = node_spectrum_analyzer_init_ex(&analyzer, &config);
-    zassert_not_equal(ret, 0, "FFT size > 2048 should fail");
+    zassert_not_equal(ret, 0, "FFT size > 512 should fail");
 }
 
 /**
@@ -429,7 +429,7 @@ ZTEST(spectrum_analyzer_v2, test_multiple_blocks)
  */
 ZTEST(spectrum_analyzer_v2, test_bin_to_freq)
 {
-    size_t fft_size = 1024;
+    size_t fft_size = 512;
     uint32_t sample_rate = CONFIG_AUDIO_SAMPLE_RATE;
 
     // Bin 0 should be 0 Hz (DC)
@@ -511,9 +511,9 @@ ZTEST(spectrum_analyzer_v2, test_passthrough)
  */
 ZTEST(spectrum_analyzer_v2, test_various_fft_sizes)
 {
-    size_t fft_sizes[] = {64, 128, 256, 512, 1024, 2048};
+    size_t fft_sizes[] = {64, 128, 256, 512};
 
-    for (size_t i = 0; i < 6; i++) {
+    for (size_t i = 0; i < 4; i++) {
         struct audio_node analyzer;
         node_spectrum_analyzer_init(&analyzer, fft_sizes[i]);
 

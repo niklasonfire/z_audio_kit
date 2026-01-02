@@ -13,8 +13,8 @@
 #include <string.h>
 #include <math.h>
 
-// Platform detection
-#if defined(__ARM_ARCH) || defined(__arm__) || defined(__ARM_EABI__)
+// Platform detection - use Kconfig instead of compiler defines
+#ifdef CONFIG_CMSIS_DSP
     #define PLATFORM_ARM 1
     #include <arm_math.h>  // CMSIS-DSP
     #include <arm_const_structs.h>
@@ -30,8 +30,9 @@
 
 /**
  * @brief Maximum supported FFT size
+ * Reduced to 512 for constrained embedded targets
  */
-#define MAX_FFT_SIZE 2048
+#define MAX_FFT_SIZE 512
 
 /**
  * @brief Spectrum analyzer context

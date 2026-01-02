@@ -210,9 +210,10 @@ struct spectrum_analyzer_config {
 
 /**
  * @brief Default configuration macro
+ * Note: FFT size limited to 256 for embedded targets with limited RAM
  */
 #define SPECTRUM_ANALYZER_DEFAULT_CONFIG {      \
-    .fft_size = 1024,                           \
+    .fft_size = 256,                            \
     .hop_size = 0,                              \
     .window = SPECTRUM_WINDOW_HANN,             \
     .compute_phase = false,                     \
