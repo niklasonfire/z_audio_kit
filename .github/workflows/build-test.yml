@@ -84,10 +84,6 @@ jobs:
           tar -xzf zephyr-workspace.tar.gz
           rm zephyr-workspace.tar.gz
 
-      - name: Pull Zephyr CI container
-        run: |
-          docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
-
       - name: Build basic_sine for ${{ matrix.board }}
         run: |
           docker run --rm \
@@ -143,10 +139,6 @@ jobs:
         run: |
           tar -xzf zephyr-workspace.tar.gz
           rm zephyr-workspace.tar.gz
-
-      - name: Pull Zephyr CI container
-        run: |
-          docker pull ghcr.io/zephyrproject-rtos/ci:v0.26.13
 
       - name: Build analyzer_logic for ${{ matrix.board }}
         run: |
