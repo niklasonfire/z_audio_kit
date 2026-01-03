@@ -101,6 +101,7 @@ jobs:
             -w /workspace \
             ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
             bash -c "
+              west zephyr-export
               west build -b ${{ matrix.board }} samples/basic_sine -p
             "
 
@@ -119,6 +120,7 @@ jobs:
             -w /workspace \
             ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
             bash -c "
+              west zephyr-export
               west build -b ${{ matrix.board }} samples/metering_console -p
             "
 
@@ -166,7 +168,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
-            bash -c "west build -b ${{ matrix.board }} tests/analyzer_logic -p"
+            bash -c "west zephyr-export && west build -b ${{ matrix.board }} tests/analyzer_logic -p"
 
       - name: Run analyzer_logic test on native_sim
         if: matrix.board == 'native_sim'
@@ -191,7 +193,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
-            bash -c "west build -b ${{ matrix.board }} tests/cow_integrity -p"
+            bash -c "west zephyr-export && west build -b ${{ matrix.board }} tests/cow_integrity -p"
 
       - name: Run cow_integrity test on native_sim
         if: matrix.board == 'native_sim'
@@ -216,7 +218,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
-            bash -c "west build -b ${{ matrix.board }} tests/memory_check -p"
+            bash -c "west zephyr-export && west build -b ${{ matrix.board }} tests/memory_check -p"
 
       - name: Run memory_check test on native_sim
         if: matrix.board == 'native_sim'
@@ -241,7 +243,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ghcr.io/zephyrproject-rtos/ci:v0.26.13 \
-            bash -c "west build -b ${{ matrix.board }} tests/spectrum_analyzer_v2 -p"
+            bash -c "west zephyr-export && west build -b ${{ matrix.board }} tests/spectrum_analyzer_v2 -p"
 
       - name: Run spectrum_analyzer_v2 test on native_sim
         if: matrix.board == 'native_sim'
