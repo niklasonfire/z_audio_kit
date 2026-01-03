@@ -74,6 +74,16 @@ jobs:
         board: [native_sim, qemu_cortex_m3]
 
     steps:
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo apt-get clean
+          df -h
+
       - name: Download workspace
         uses: actions/download-artifact@v4
         with:
@@ -130,6 +140,16 @@ jobs:
         board: [native_sim, qemu_cortex_m3]
 
     steps:
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo apt-get clean
+          df -h
+
       - name: Download workspace
         uses: actions/download-artifact@v4
         with:
